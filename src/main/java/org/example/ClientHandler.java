@@ -8,6 +8,7 @@ import java.net.Socket;
 
 public class ClientHandler implements Runnable{
 
+    private final String line = "---------------------------------------------------------";
     private Socket socket;
     private static Calculator calc = new Calculator();
 
@@ -27,6 +28,7 @@ public class ClientHandler implements Runnable{
         if(outToClient == null) return;
         outToClient.println("\nConnection established!");
 
+        //Handling client
         userCommands(in, outToClient);
     }
 
@@ -46,15 +48,19 @@ public class ClientHandler implements Runnable{
         return in;
     }
 
-    private boolean hasMinArgs(String[] args, int min, PrintWriter outToClient){
+    //checks if command has enough arguments
+    private boolean hasMinArgs(String[] args, int min, PrintWriter outToClient, boolean sendResponseToClient){
         min--;
         if(args.length > min)
             return true;
-        outToClient.println("-Not enough arguments!\n");
+
+        if(sendResponseToClient) outToClient.println("-Not enough arguments!\n");
+
         return  false;
     }
 
 
+    //returns an upper case string
     private String capitlizeOp(String[] args){
 
         String result = "";
@@ -78,7 +84,7 @@ public class ClientHandler implements Runnable{
     }
 
     private void userCommands(BufferedReader in, PrintWriter outToClient){
-        outToClient.println("\n\n\n--------------------------------------------------" +
+        outToClient.println("\n\n\n" +line+
                 "\nconnection established\n\nenter command...");
 
         for(;;){
@@ -95,24 +101,42 @@ public class ClientHandler implements Runnable{
 
             switch (args[0]){
                 case "calc":
-                    if(!hasMinArgs(args, 2, outToClient)) break;
+                    if(!hasMinArgs(args, 2, outToClient, true)) break;
 
                     double result = calc.getResult(args[1]);
                     outToClient.println(result);
                     break;
 
                 case "cap":
-                    if(!hasMinArgs(args, 2, outToClient)) break;
+                    if(!hasMinArgs(args, 2, outToClient, true)) break;
 
                     outToClient.println(
                             capitlizeOp(args));
                     break;
+
+                case "exit", "quit", "q":
+                    //prevents closing connection when writing more than 1 argument
+                    if(hasMinArgs(args, 2, outToClient, false)) break;
+
+                    outToClient.println(line+"\n\n\n\n\n Connection closed");
+                    closeConnection();
 
                 default:
                     outToClient.println("Command doesn't exist\n");
                     break;
             }
         }
+    }
+
+    public void closeConnection(){
+        try {
+            socket.close();
+        } catch (IOException e) {
+            System.out.println("Error when closing");
+            return;
+        }
+
+        System.out.println("closed connection with: "+ socket.getInetAddress());
     }
 
     public Socket getSocket() {
